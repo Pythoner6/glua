@@ -361,8 +361,20 @@ inline void call(lua_State& l, int nargs, int nret) {
     lua_call(&l, nargs, nret);
 }
 
-inline void load(lua_State& l, const char* filename) {
+inline void loadFile(lua_State& l, const char* filename) {
     luaL_dofile(&l, filename);
+}
+
+inline void loadFile(lua_State& l, std::string filename) {
+    luaL_dofile(&l, filename.c_str());
+}
+
+inline void loadString(lua_State& l, const char* chunk) {
+    luaL_dostring(&l, chunk);
+}
+
+inline void loadString(lua_State& l, std::string chunk) {
+    luaL_dostring(&l, chunk.c_str());
 }
 
 inline int ref(lua_State& l) {

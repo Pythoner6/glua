@@ -27,7 +27,19 @@ public:
     }
 
     inline void load(const char* filename) {
-        api::load(l, filename);
+        api::loadFile(l, filename);
+    }
+
+    inline void load(std::string filename) {
+        api::loadFile(l, filename);
+    }
+
+    inline void run(const char* chunk) {
+        api::loadString(l, chunk);
+    }
+
+    inline void run(std::string chunk) {
+        api::loadString(l, chunk);
     }
 
     template<typename FuncT, FuncT func>

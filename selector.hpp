@@ -60,6 +60,11 @@ namespace detail {
             return get<T>();
         }
 
+        template<typename T>
+        inline operator T&() {
+            return get<T&>();
+        }
+
         ret(lua_State& l) : l(l) {}
     };
 
