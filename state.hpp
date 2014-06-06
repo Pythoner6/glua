@@ -22,22 +22,37 @@ public:
         api::close(l);
     }
 
+    /**
+     * Access a global variable.
+     */
     inline global operator[](const char* key) {
         return global(l, key);
     }
 
+    /**
+     * Load and run a lua file.
+     */
     inline void load(const char* filename) {
         api::loadFile(l, filename);
     }
 
+    /**
+     * Load and run a lua file.
+     */
     inline void load(std::string filename) {
         api::loadFile(l, filename);
     }
 
+    /**
+     * Load and run a c-string as a lua chunk.
+     */
     inline void run(const char* chunk) {
         api::loadString(l, chunk);
     }
 
+    /**
+     * Load and run a string as a lua chunk.
+     */
     inline void run(std::string chunk) {
         api::loadString(l, chunk);
     }
@@ -48,8 +63,8 @@ public:
         lua_setglobal(&l, name);
     }
 
-    lua_State& l;
 private:
+    lua_State& l;
 };
 
 } // namespace glua
