@@ -3,6 +3,13 @@
 #include "api.hpp"
 #include "ref.hpp"
 
+/**
+ * function.hpp
+ * Contains glua::function, a template class which represents
+ * a lua function, providing a way to call lua functions from
+ * c++ code.
+ */
+
 namespace glua {
 
 template<typename FuncType>
@@ -19,11 +26,11 @@ public:
     virtual ~function() {}
 
 
-    auto operator()(Args... args) 
+    auto operator()(Args&&... args) 
     -> decltype(api::checkGet<Ret>(l))
     {
         this->ref::push();
-        api::push(l, args...);
+        api::push(l, std::forward<Args>(args)...);
         api::call(l, sizeof...(Args), 1);
         decltype(api::checkGet<Ret>(l)) ret = api::checkGet<Ret>(l);
         api::clearStack(l);
@@ -43,9 +50,9 @@ public:
 
     virtual ~function() {}
 
-    void operator()(Args... args) {
+    void operator()(Args&&... args) {
         this->ref::push();
-        api::push(l, args...);
+        api::push(l, std::forward<Args>(args)...);
         api::call(l, sizeof...(Args), 0);
     }
 private:
@@ -61,11 +68,13 @@ public:
 
     virtual ~function() {}
 
-    std::tuple<Rets...> operator()(Args... args) {
+    auto operator()(Args&&... args) 
+    -> decltype(api::checkGet<Rets...>(l))
+    {
         this->ref::push();
-        api::push(l, args...);
+        api::push(l, std::forward<Args>(args)...);
         api::call(l, sizeof...(Args), sizeof...(Rets));
-        std::tuple<Rets...> ret = api::checkGet<Rets...>(l);
+        decltype(api::checkGet<Rets...>(l)) ret = api::checkGet<Rets...>(l);
         api::clearStack(l);
         return ret;
     }

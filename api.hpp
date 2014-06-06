@@ -2,6 +2,11 @@
 
 #include <stdexcept>
 #include <tuple>
+
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+
 #include "util.hpp"
 
 /**
@@ -119,7 +124,7 @@ struct _push_n_impl {};
 
 template<typename T1, typename... T>
 struct _push_n_impl<T1, T...> {
-    inline static void push(lua_State& l, T1 val1, T... vals) {
+    inline static void push(lua_State& l, T1&& val1, T&&... vals) {
         _push_impl<T1>::push(l, std::forward<T1>(val1));
         _push_n_impl<T...>::push(l, std::forward<T>(vals)...);
     }

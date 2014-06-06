@@ -1,6 +1,5 @@
 #pragma once
 
-#include <lua.hpp>
 #include "api.hpp"
 
 namespace glua {
@@ -154,7 +153,8 @@ public:
     }
 
 protected:
-    inline selector(lua_State& l, Key&& key) : selector_base(l), key(std::move(key)) {}
+    inline selector(lua_State& l, Key&& key) : selector_base(l), key(key) {}
+    inline selector(lua_State& l, const Key& key) : selector_base(l), key(key) {}
 
     Key key;
 };

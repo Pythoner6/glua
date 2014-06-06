@@ -7,7 +7,7 @@ namespace glua {
 
 class ref : public selector<int> {
 public:
-    inline ref(ref&& r) : selector<int>(r.l, r.key) {
+    inline ref(ref&& r) : selector<int>(r.l, std::move(r.key)) {
         r.key = LUA_NOREF;
     }
 

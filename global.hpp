@@ -27,8 +27,7 @@ public:
     }
 private:
     friend class state;
-    inline global(lua_State& l, const char* key) : selector<const char*>(l, key) {}
-
+    inline global(lua_State& l, const char* key) : selector<const char*>(l, std::forward<const char*>(key)) {}
 };
 
 } // namespace glua

@@ -1,6 +1,5 @@
 #pragma once
 #include <stdexcept>
-#include <lua.hpp>
 
 #include "api.hpp"
 #include "global.hpp"
