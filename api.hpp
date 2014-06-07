@@ -32,7 +32,20 @@ namespace api {
  */
 template<typename T>
 inline T& newUserdata(lua_State& l) {
-    return *static_cast<T*>(lua_newuserdata(&l, sizeof(T)));
+    T* t = static_cast<T*>(lua_newuserdata(&l, sizeof(T)));
+    if(t == nullptr) throw std::runtime_error("Error: lua_newuserdata returned null pointer");
+    luaL_newmetatable(&l, ::glua::detail::type_traits<T>::name);
+    lua_setmetatable(&l, -2);
+    return *t;
+}
+
+template<typename T>
+inline T& newUserdata(lua_State& l, const char* name) {
+    T* t = static_cast<T*>(lua_newuserdata(&l, sizeof(T)));
+    if(t == nullptr) throw std::runtime_error("Error: lua_newuserdata returned null pointer");
+    luaL_newmetatable(&l, name);
+    lua_setmetatable(&l, -2);
+    return *t;
 }
 
 /**
@@ -41,18 +54,19 @@ inline T& newUserdata(lua_State& l) {
  */
 template<typename T>
 inline T& getUserdata(lua_State& l, int index) {
-    T* t = static_cast<T*>(lua_touserdata(&l, index));
+    T* t = static_cast<T*>(luaL_checkudata(&l, index, ::glua::detail::type_traits<T>::name));
     if(t == nullptr) throw std::runtime_error("Error: trying to get non-userdata as userdata");
-    return *t;
+    else return *t;
+}
+
+template<typename T>
+inline T& getUserdata(lua_State& l, int index, const char* name) {
+    T* t = static_cast<T*>(luaL_checkudata(&l, index, name));
+    if(t == nullptr) throw std::runtime_error("Error: trying to get non-userdata as userdata");
+    else return *t;
 }
 
 namespace detail {
-
-template<typename T>
-struct registry {
-    static constexpr bool exists = false;
-    static constexpr char* name = nullptr;
-};
 
 /**
  * Template struct containing a single method
@@ -76,12 +90,14 @@ struct _push_impl {
  * Creates a new userdata of T* and assigns it the
  * value of &ref
  */
+/*
 template<typename T>
 struct _push_impl<T&> {
     inline static void push(lua_State& l, T& ref) {
-        newUserdata<T*>(l) = &ref;
+        _push_impl<T*>::push(l, &ref);
     }
 };
+*/
 
 /**
  * Push implementaiton for arbitrary pointer types.
@@ -183,9 +199,9 @@ struct _push_n_impl {};
  */
 template<typename T1, typename... T>
 struct _push_n_impl<T1, T...> {
-    inline static void push(lua_State& l, T1&& val1, T&&... vals) {
-        _push_impl<T1>::push(l, std::forward<T1>(val1));
-        _push_n_impl<T...>::push(l, std::forward<T>(vals)...);
+    inline static void push(lua_State& l, T1 val1, T... vals) {
+        _push_impl<T1>::push(l, val1);
+        _push_n_impl<T...>::push(l, vals...);
     }
 };
 
@@ -194,8 +210,8 @@ struct _push_n_impl<T1, T...> {
  */
 template<typename T>
 struct _push_n_impl<T> {
-    inline static void push(lua_State& l, T&& val) {
-        _push_impl<T>::push(l, std::forward<T>(val));
+    inline static void push(lua_State& l, T val) {
+        _push_impl<T>::push(l, val);
     }
 };
 } // namespace detail
@@ -204,8 +220,8 @@ struct _push_n_impl<T> {
  * Push any number of arbitrary values onto the lua stack.
  */
 template<typename... T>
-inline void push(lua_State& l, T&&... vals) {
-    detail::_push_n_impl<T...>::push(l, std::forward<T>(vals)...);
+inline void push(lua_State& l, T... vals) {
+    detail::_push_n_impl<T...>::push(l, vals...);
 }
 
 namespace detail {
@@ -338,6 +354,7 @@ struct _check_get_impl {
  * a reference, as long as the pointer is not null.
  * If the pointer is null, throws an exception.
  */
+/*
 template<typename T>
 struct _check_get_impl<T&> {
     inline static T& get(lua_State& l, int index) 
@@ -347,6 +364,7 @@ struct _check_get_impl<T&> {
         return *ret;
     }
 };
+*/
 
 /**
  * Partial specialization for pointer types.
@@ -457,9 +475,9 @@ struct _check_get_n_impl<std::tuple<T...>> {
      */
     template<int... I>
     inline static auto work(lua_State& l, ::glua::detail::_index_list<I...>) 
-    -> decltype(std::make_tuple(_check_get_n_impl<T,sizeof...(I)>::get(l, I)...))
+    -> decltype(make<std::tuple>(_check_get_n_impl<T,sizeof...(I)>::get(l, I)...))
     {
-        return std::make_tuple(_check_get_n_impl<T,sizeof...(I)>::get(l, I)...);
+        return make<std::tuple>(_check_get_n_impl<T,sizeof...(I)>::get(l, I)...);
     }
 
     inline static auto get(lua_State& l)

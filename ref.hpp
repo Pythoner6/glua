@@ -17,7 +17,6 @@ public:
         key = api::ref(l);
     }
 
-
     inline virtual ~ref() {
         api::unref(l, key); 
     }

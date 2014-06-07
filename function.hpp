@@ -18,7 +18,7 @@ class function {};
 template<typename Ret, typename... Args>
 class function<Ret(Args...)> : public ref {
 public:
-    template<typename S, typename std::enable_if<std::is_base_of<selector_base, S>::value>::type* = nullptr>
+    template<typename S, typename = typename std::enable_if<std::is_base_of<selector_base, S>::value>::type>
     function(S&& sel) : ref(std::forward<S>(sel)) {}
     function(ref&& r) : ref(std::move(r)) {}
     function(function&& f) : ref(std::move(f)) {}
@@ -37,7 +37,6 @@ public:
         return ret;
         //return api::checkGet<Ret>(l);
     } 
-private:
 };
 
 template<typename... Args>
@@ -55,7 +54,6 @@ public:
         api::push(l, std::forward<Args>(args)...);
         api::call(l, sizeof...(Args), 0);
     }
-private:
 };
 
 template<typename... Rets, typename... Args>

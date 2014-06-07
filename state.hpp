@@ -63,6 +63,11 @@ public:
         lua_setglobal(&l, name);
     }
 
+    template<typename Functor>
+    void registerFunction(const char* name, Functor f) {
+        cfunctor<Functor>::push(l, f);
+        lua_setglobal(&l, name);
+    }
 private:
     lua_State& l;
 };

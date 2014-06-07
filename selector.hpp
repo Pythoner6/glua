@@ -4,69 +4,46 @@
 
 namespace glua {
 
+class selector_base;
+
 namespace detail {
-    template<int Nargs, typename T>
-    struct _call_return {
-        inline static auto call(lua_State& l) 
-        -> decltype(api::checkGet<T>(l))
-        {
-            api::call(l, Nargs, 1);
-            return api::checkGet<T>(l);
-        }
-    };
+template<typename Ret, typename... Args>
+struct _call_impl {
+    inline static Ret call(lua_State& l, Args&&... args) {
+        api::push(l, std::forward<Args>(args)...);
+        api::call(l, sizeof...(Args), 1);
+        return api::checkGet<Ret>(l);
+    }
+};
 
-    template<int Nargs, typename... T>
-    struct _call_return<Nargs, std::tuple<T...>> {
-        inline static auto call(lua_State& l) 
-        -> decltype(api::checkGet<std::tuple<T...>>(l))
-        {
-            api::call(l, Nargs, sizeof...(T));
-            return api::checkGet<std::tuple<T...>>(l);
-        }
-    };
+template<typename... Rets, typename... Args>
+struct _call_impl<std::tuple<Rets...>, Args...> {
+    inline static std::tuple<Rets...> call(lua_State& l, Args&&... args) {
+        api::push(l, std::forward<Args>(args)...);
+        api::call(l, sizeof...(Args), sizeof...(Rets));
+        return api::checkGet<std::tuple<Rets...>>(l);
+    }
+};
 
-    template<int Nargs, typename T>
-    inline auto callReturn(lua_State& l) 
-    -> decltype(_call_return<Nargs, T>::call(l))
+struct ret {
+private:
+    lua_State& l;
+
+    friend class ::glua::selector_base;
+    ret(lua_State& l) : l(l) {}
+public:
+    template<typename T>
+    inline auto get() 
+    -> decltype(api::checkGet<T>(l))
     {
-        return _call_return<Nargs, T>::call(l);
+        return api::checkGet<T>(l);
     }
 
-    template<int Nargs>
-    class ret {
-    private:
-        lua_State& l;
-    public:
-        template<typename T>
-        inline auto get() 
-        -> decltype(detail::callReturn<Nargs, T>(l))
-        {
-            return detail::callReturn<Nargs, T>(l);
-        }
-
-        /*
-        template<typename T, typename = typename 
-            std::enable_if<
-                //std::is_pod<T>::value         ||
-                std::is_fundamental<T>::value ||
-                std::is_pointer<T>::value     ||
-                std::is_reference<T>::value   ||
-                api::detail::registry<T>::exists
-            >::type
-        >
-        */
-        template<typename T>
-        inline operator T() {
-            return get<T>();
-        }
-
-        template<typename T>
-        inline operator T&() {
-            return get<T&>();
-        }
-
-        ret(lua_State& l) : l(l) {}
-    };
+    template<typename T>
+    inline operator T() {
+        return get<T>();
+    }
+};
 
 } // namespace detail
 
@@ -84,55 +61,35 @@ public:
     template<typename T>
     void set(T val);
 
-    //template<typename T, typename = typename std::enable_if<!std::is_base_of<selector_base, T>::value>::type>
-    /*
-    template<typename T, typename = typename 
-        std::enable_if<
-            std::is_pod<T>::value         ||
-            std::is_fundamental<T>::value ||
-            std::is_pointer<T>::value     ||
-            std::is_reference<T>::value   ||
-            api::detail::registry<T>::exists
-        >::type
-    >
-    */
     template<typename T>
     inline auto get() 
     -> decltype(api::checkGet<T>(l))
     {
         this->push();
-        auto val = api::checkGet<T>(l);
+        decltype(api::checkGet<T>(l)) val = api::checkGet<T>(l);
         return val;
     }
 
     template<typename T, typename = typename 
         std::enable_if<
-            std::is_pod<T>::value         ||
+            (std::is_pod<T>::value         ||
             std::is_fundamental<T>::value ||
-            std::is_pointer<T>::value     ||
-            std::is_reference<T>::value   ||
-            api::detail::registry<T>::exists
+            std::is_pointer<T>::value     ) &&
+            !std::is_reference<T>::value
         >::type
     >
     inline operator T() {
         return get<T>();
     }
 
-    template<typename T>
-    inline void operator=(T&& val) {
-        this->set(std::forward<T>(val));
-    }
-
     template<typename... Args>
-    inline detail::ret<sizeof...(Args)> operator()(Args&&... args) {
+    inline detail::ret operator()(Args&&... args) {
         this->push();
-        api::push(l, std::forward<Args>(args)...);
-        return detail::ret<sizeof...(Args)>(l);
-    }
 
-    inline detail::ret<0> operator()() {
-        this->push();
-        return detail::ret<0>(l);
+        //return detail::_call_impl<Ret, Args...>::call(l, std::forward<Args>(args)...);
+        api::push(l, std::forward<Args>(args)...);
+        api::call(l, sizeof...(Args), LUA_MULTRET);
+        return detail::ret(l);
     }
 
 protected:
@@ -147,9 +104,10 @@ public:
     }
 
     template<typename T>
-    void set(T val) {
-        api::setTable(l, key, val);
-    }
+    void set(T val) { api::setTable(l, key, val); }
+
+    template<typename T>
+    inline void operator=(T val) { set(val); }
 
     template<typename K>
     inline auto operator[](K&& nextKey) && -> selector<K> {

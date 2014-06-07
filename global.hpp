@@ -22,9 +22,10 @@ public:
     }
 
     template<typename T>
-    void set(T val) {
-        api::setGlobal(l, key, val);
-    }
+    void set(T val) { api::setGlobal(l, key, val); }
+
+    template<typename T>
+    inline void operator=(T val) { set(val); }
 private:
     friend class state;
     inline global(lua_State& l, const char* key) : selector<const char*>(l, std::forward<const char*>(key)) {}
